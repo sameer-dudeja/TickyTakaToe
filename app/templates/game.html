@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+    <!-- Match Info -->
+    <div class="flex justify-between items-center mb-4">
+        <div class="text-gray-600">
+            <span class="font-bold">Board:</span> {{ game.board_size }}x{{ game.board_size }}
+            {% if game.time_limit > 0 %}
+            | <span class="font-bold">Time:</span> {{ game.time_limit }}s per move
+            {% endif %}
+        </div>
+        {% if game.match_format != 'single' %}
+        <div class="flex items-center space-x-4">
+            <div class="text-center">
+                <div class="text-sm text-gray-500">Player 1</div>
+                <div class="text-xl font-bold">{{ game.player1_wins }}</div>
+            </div>
+            <div class="text-2xl font-bold text-gray-400">vs</div>
+            <div class="text-center">
+                <div class="text-sm text-gray-500">Player 2</div>
+                <div class="text-xl font-bold">{{ game.player2_wins }}</div>
+            </div>
+        </div>
+        {% endif %}
+        {% if game.time_limit > 0 %}
+        <div id="timer" class="text-xl font-bold {% if game.current_time < 10 %}text-red-500{% endif %}">
+            {{ game.current_time }}s
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Match Progress -->
+    {% if game.match_format != 'single' %}
+    <div class="text-center mb-4">
+        <div class="text-sm text-gray-500">
+            {% if game.match_format == 'bo3' %}
+                Best of 3 - First to win 2 games
+            {% else %}
+                Best of 5 - First to win 3 games
+            {% endif %}
+        </div>
+        <div class="flex justify-center items-center space-x-2 mt-2">
+            {% for i in range(game.games_to_win) %}
+                {% if i < game.player1_wins %}
+                    <div class="w-4 h-4 rounded-full bg-green-500"></div>
+                {% elif i < game.player2_wins %}
+                    <div class="w-4 h-4 rounded-full bg-blue-500"></div>
+                {% else %}
+                    <div class="w-4 h-4 rounded-full bg-gray-200"></div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Game Status -->
+    <div id="game-status" class="text-center mb-4 text-xl font-bold">
+        {% if game.match_winner %}
+            Player {{ game.match_winner }} wins the match!
+        {% elif game.winner %}
+            Player {{ game.winner }} wins this game!
+        {% elif game.is_draw %}
+            This game is a draw!
+        {% else %}
+            Player {{ game.current_player }}'s turn
+        {% endif %}
+    </div>
+
+    <!-- Game Board -->
+    <div 
+        class="grid gap-2 mb-4" 
+        id="game-board"
+        data-board-size="{{ game.board_size }}"
+        data-time-limit="{{ game.time_limit }}"
+        data-current-time="{{ game.current_time }}"
+        data-game-id="{{ game.id }}"
+    >
+        {% for row in range(game.board_size) %}
+            {% for col in range(game.board_size) %}
+                <button
+                    class="aspect-square bg-gray-200 rounded-lg text-4xl font-bold hover:bg-gray-300 transition-colors flex items-center justify-center"
+                    hx-post="/move"
+                    hx-trigger="click"
+                    hx-vals='{"row": {{ row }}, "col": {{ col }}, "game_id": "{{ game.id }}"}'
+                    hx-target="#game-board"
+                    {% if game.board[row][col] or game.winner or game.is_draw %}
+                        disabled
+                    {% endif %}
+                >
+                    {{ game.board[row][col] if game.board[row][col] else '' }}
+                </button>
+            {% endfor %}
+        {% endfor %}
+    </div>
+
+    <!-- Game Actions -->
+    <div class="text-center space-y-3">
+        {% if game.winner or game.is_draw %}
+            <div class="flex justify-center space-x-3">
+                {% if not game.match_winner %}
+                    <!-- Next Game Button -->
+                    <button
+                        class="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600 transition-colors duration-200 flex items-center"
+                        hx-post="/game/next"
+                        hx-target="#game-container"
+                        hx-vals='{"game_id": "{{ game.id }}"}'
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                        Next Game
+                    </button>
+                {% endif %}
+
+                <!-- New Match Button -->
+                <button
+                    class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors duration-200"
+                    hx-get="/"
+                    hx-target="body"
+                >
+                    New Match
+                </button>
+            </div>
+
+            <!-- Match Stats -->
+            <div class="mt-4 text-sm text-gray-600 space-y-1">
+                <p>Game ID: <span class="font-mono bg-gray-100 px-2 py-1 rounded">{{ game.id }}</span>
+                    <button
+                        class="ml-2 text-blue-500 hover:text-blue-700"
+                        onclick="navigator.clipboard.writeText('{{ game.id }}')"
+                    >
+                        Copy
+                    </button>
+                </p>
+                {% if game.match_format != 'single' %}
+                    <p>Match Score: Player 1 ({{ game.player1_wins }}) - Player 2 ({{ game.player2_wins }})</p>
+                {% endif %}
+            </div>
+        {% else %}
+            <!-- Show game ID during gameplay -->
+            <div class="text-sm text-gray-600">
+                Game ID: <span class="font-mono bg-gray-100 px-2 py-1 rounded">{{ game.id }}</span>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Game Scripts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const gameBoard = document.getElementById('game-board');
+    if (!gameBoard) return;
+
+    // Get configuration from data attributes
+    const config = {
+        boardSize: parseInt(gameBoard.dataset.boardSize || '3'),
+        timeLimit: parseInt(gameBoard.dataset.timeLimit || '0'),
+        currentTime: parseInt(gameBoard.dataset.currentTime || '0'),
+        gameId: gameBoard.dataset.gameId
+    };
+
+    // Set up game board grid
+    gameBoard.style.gridTemplateColumns = `repeat(${config.boardSize}, minmax(0, 1fr))`;
+    
+    // Set up timer if needed
+    if (config.timeLimit > 0) {
+        let timeLeft = config.currentTime;
+        const timerId = setInterval(function() {
+            timeLeft--;
+            const timerEl = document.getElementById('timer');
+            if (timerEl) {
+                timerEl.textContent = timeLeft + 's';
+                if (timeLeft < 10) {
+                    timerEl.classList.add('text-red-500');
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(timerId);
+                    htmx.ajax('POST', '/move/timeout', { 
+                        target: '#game-board',
+                        values: { game_id: config.gameId }
+                    });
+                }
+            }
+        }, 1000);
+    }
+});
+</script>
+{% endblock %} 

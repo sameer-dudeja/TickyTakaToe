@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg">
+    <div class="text-center mb-8">
+        <h2 class="text-3xl font-bold text-gray-800 mb-2">Tic Tac Toe</h2>
+        <p class="text-gray-600">Create or join a game to start playing!</p>
+    </div>
+
+    <div class="space-y-4">
+        <!-- Create Game Button with Settings -->
+        <div class="space-y-2">
+            <button 
+                class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                hx-get="/game-settings"
+                hx-target="#settings-modal"
+                hx-trigger="click"
+            >
+                Create New Game
+            </button>
+            <p class="text-xs text-gray-500 text-center">Click to configure game settings</p>
+        </div>
+
+        <!-- Join Game Form -->
+        <div class="border-t pt-4">
+            <form 
+                class="flex gap-2"
+                hx-post="/game/join"
+                hx-target="#game-container"
+                hx-swap="innerHTML"
+            >
+                <input 
+                    type="text" 
+                    name="game_id" 
+                    placeholder="Enter Game ID"
+                    class="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                >
+                <button 
+                    type="submit"
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors duration-200"
+                >
+                    Join
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container" class="mt-6">
+        <!-- Game will be loaded here -->
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold mb-4">Game Settings</h3>
+            
+            <form hx-post="/game/create" hx-target="#game-container">
+                <!-- Match Format -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Match Format</label>
+                    <select name="match_format" class="w-full border rounded-lg px-3 py-2">
+                        <option value="single">Single Game</option>
+                        <option value="bo3">Best of 3</option>
+                        <option value="bo5">Best of 5</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Best of 3: First to win 2 games
+                        Best of 5: First to win 3 games
+                    </p>
+                </div>
+
+                <!-- Board Size -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Board Size</label>
+                    <select name="board_size" class="w-full border rounded-lg px-3 py-2">
+                        <option value="3">3x3 (Classic)</option>
+                        <option value="4">4x4 (Challenge)</option>
+                        <option value="5">5x5 (Expert)</option>
+                    </select>
+                </div>
+
+                <!-- Win Condition -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Win Condition</label>
+                    <select name="win_condition" class="w-full border rounded-lg px-3 py-2">
+                        <option value="3">3 in a row (Classic)</option>
+                        <option value="4">4 in a row</option>
+                        <option value="5">5 in a row</option>
+                    </select>
+                </div>
+
+                <!-- Time Limit -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Time per Move</label>
+                    <select name="time_limit" class="w-full border rounded-lg px-3 py-2">
+                        <option value="0">No limit</option>
+                        <option value="10">10 seconds</option>
+                        <option value="30">30 seconds</option>
+                        <option value="60">60 seconds</option>
+                    </select>
+                </div>
+
+                <!-- Player Markers -->
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Player 1 Marker</label>
+                    <select name="player1_marker" class="w-full border rounded-lg px-3 py-2">
+                        <option value="X">X (Classic)</option>
+                        <option value="○">○ (Circle)</option>
+                        <option value="★">★ (Star)</option>
+                        <option value="♥">♥ (Heart)</option>
+                    </select>
+                </div>
+
+                <!-- First Move -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">First Move</label>
+                    <select name="first_move" class="w-full border rounded-lg px-3 py-2">
+                        <option value="random">Random</option>
+                        <option value="player1">Player 1</option>
+                        <option value="player2">Player 2</option>
+                    </select>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex justify-end space-x-2">
+                    <button 
+                        type="button"
+                        class="px-4 py-2 text-gray-600 hover:text-gray-800"
+                        onclick="document.getElementById('settings-modal').classList.add('hidden')"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        onclick="document.getElementById('settings-modal').classList.add('hidden')"
+                    >
+                        Create Game
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Initialize Modal Functionality -->
+<script>
+document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+    if (evt.detail.elt.id === 'settings-modal') {
+        evt.detail.elt.classList.remove('hidden');
+    }
+});
+</script>
+{% endblock %}
