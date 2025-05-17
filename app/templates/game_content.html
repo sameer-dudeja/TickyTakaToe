@@ -1,18 +1,5 @@
-<!-- Game Page -->
-{% extends "base.html" %}
-
-
-{% block content %}
-<style>
-.game-grid {
-    display: grid;
-    gap: 0.5rem;
-    grid-template-columns: repeat({{ game.board_size }}, 1fr);
-}
-</style>
 <div id="game-container" class="max-w-2xl mx-auto" data-player-id="{{ player_id }}">
     <div class="bg-white rounded-xl shadow-md p-6">
-        <!-- Game Info -->
         <div class="mb-6 text-center">
             <h2 class="text-2xl font-bold mb-2">Game #{{ game.id[:8] }}</h2>
             <div class="flex justify-center space-x-8">
@@ -27,35 +14,46 @@
             </div>
         </div>
 
-        <!-- Game Board -->
-        <div class="game-board grid gap-2 {% if game.board_size == 3 %}grid-cols-3{% elif game.board_size == 4 %}grid-cols-4{% else %}grid-cols-5{% endif %}">
-            {% for row in range(game.board_size) %}
-                {% for col in range(game.board_size) %}
-                    <button 
-                        class="w-16 h-16 bg-gray-100 rounded-lg text-2xl font-bold flex items-center justify-center hover:bg-gray-200 {% if game.board[row][col] or game.status != 'in_progress' or game.players[game.current_player_index].id != player_id %}opacity-75{% endif %}"
-                        hx-post="/api/games/{{ game.id }}/move"
-                        hx-vals='{"row": {{ row }}, "col": {{ col }}, "player_id": "{{ player_id }}"}'
-                        hx-target="#game-container"
-                        hx-swap="outerHTML"
-                        data-row="{{ row }}"
-                        data-col="{{ col }}"
-                        {% if game.board[row][col] or game.status != 'in_progress' or game.players[game.current_player_index].id != player_id %}disabled{% endif %}
-                    >
-                        {{ game.board[row][col] or '' }}
-                    </button>
+        <div class="flex justify-center mb-4">
+            <div class="inline-grid grid-cols-3 gap-0.5" style="width: fit-content;">
+                {% for row in range(game.board_size) %}
+                    {% for col in range(game.board_size) %}
+                        {% set is_current_player = game.players[game.current_player_index].id == player_id %}
+                        {% set is_cell_empty = not game.board[row][col] %}
+                        {% set can_move = game.status == 'in_progress' and is_current_player and is_cell_empty %}
+                        <button 
+                            class="w-14 h-14 bg-gray-100 rounded-md text-2xl font-bold flex items-center justify-center transition-colors duration-200 {% if can_move %}hover:bg-gray-200 active:bg-gray-300 cursor-pointer{% else %}cursor-not-allowed opacity-75{% endif %}"
+                            {% if can_move %}
+                            hx-post="/api/games/{{ game.id }}/move"
+                            hx-vals='{"row": {{ row }}, "col": {{ col }}, "player_id": "{{ player_id }}"}'
+                            hx-target="#game-container"
+                            hx-swap="outerHTML"
+                            hx-trigger="click"
+                            hx-indicator="#game-container"
+                            hx-include="[name='player_id']"
+                            {% endif %}
+                            data-row="{{ row }}"
+                            data-col="{{ col }}"
+                            data-can-move="{{ can_move|tojson }}"
+                            {% if not can_move %}disabled{% endif %}
+                        >
+                            {{ game.board[row][col] or '' }}
+                        </button>
+                    {% endfor %}
                 {% endfor %}
-            {% endfor %}
+            </div>
         </div>
 
-        <!-- Game Status -->
-        <div class="mt-6 text-center">
+        <input type="hidden" name="player_id" value="{{ player_id }}">
+
+        <div class="text-center">
             {% if game.status == 'waiting' %}
                 {% if game.players|length < 2 %}
                     <p class="text-yellow-600">Waiting for players...</p>
                 {% else %}
                     {% if game.players[0].id == player_id %}
                         <button 
-                            class="bg-green-500 text-white px-6 py-2 rounded-md hover:bg-green-600"
+                            class="bg-green-500 text-white px-6 py-2 rounded-md hover:bg-green-600 transition-colors duration-200"
                             hx-post="/api/games/{{ game.id }}/start"
                             hx-vals='{"player_id": "{{ player_id }}"}'
                             hx-target="#game-container"
@@ -88,7 +86,7 @@
                     {% endif %}
                 </p>
                 <button 
-                    class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                    class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors duration-200"
                     hx-post="/api/games/create"
                     hx-target="#game-container"
                     hx-swap="outerHTML"
@@ -98,5 +96,10 @@
             {% endif %}
         </div>
     </div>
-</div> 
-{% endblock %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    htmx.process(document.body);
+});
+</script> 
