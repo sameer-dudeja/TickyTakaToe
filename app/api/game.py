@@ -267,4 +267,51 @@ async def start_game(
     })
     
     # Return updated game content for HTMX
+    return render_game_content(request, game, player_id)
+
+@router.post("/games/{game_id}/rematch")
+async def rematch_game(
+    game_id: str,
+    request: Request,
+    player_id: str = Form(...)
+) -> HTMLResponse:
+    """Start a rematch - reset the game for the same players"""
+    game = games.get(game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    # Validate session
+    session_player_id = request.session.get(f"player_id_{game_id}")
+    if not session_player_id or session_player_id != player_id:
+        raise HTTPException(status_code=403, detail="Invalid session")
+    
+    # Verify player is part of the game
+    if not any(p.id == player_id for p in game.players):
+        raise HTTPException(status_code=403, detail="Not a player in this game")
+    
+    # Make sure game is finished
+    if game.status != GameStatus.FINISHED:
+        raise HTTPException(status_code=400, detail="Game is not finished yet")
+    
+    # Reset the game state for rematch
+    game.board = [[None for _ in range(game.board_size)] for _ in range(game.board_size)]
+    game.status = GameStatus.IN_PROGRESS
+    game.current_player_index = 0  # Start with Player 1 (X)
+    game.winner = None
+    
+    # Save game state
+    save_games()
+    
+    # Send WebSocket notification about rematch
+    from ..main import manager
+    await manager.broadcast_to_game(game_id, {
+        "type": "rematch_started",
+        "game_status": game.status,
+        "current_player": game.players[game.current_player_index].id,
+        "board": game.board,
+        "winner": game.winner,
+        "players": [{"id": p.id, "name": p.name, "marker": p.marker.value} for p in game.players]
+    })
+    
+    # Return updated game content
     return render_game_content(request, game, player_id) 

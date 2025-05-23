@@ -87,14 +87,18 @@
                         {% endif %}
                     {% endif %}
                 </p>
-                <button 
-                    class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-                    hx-post="/api/games/create"
-                    hx-target="#game-container"
-                    hx-swap="outerHTML"
-                >
-                    Play Again
-                </button>
+                {% if game.players[0].id == player_id %}
+                    <button 
+                        class="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors duration-200"
+                        hx-post="/api/games/{{ game.id }}/rematch"
+                        hx-vals='{"player_id": "{{ player_id }}"}'
+                        hx-target="#game-container"
+                        hx-swap="outerHTML">
+                        Play Again
+                    </button>
+                {% else %}
+                    <p class="mt-4 text-gray-600">Waiting for {{ game.players[0].name }} to start a rematch...</p>
+                {% endif %}
             {% endif %}
         </div>
     </div>
